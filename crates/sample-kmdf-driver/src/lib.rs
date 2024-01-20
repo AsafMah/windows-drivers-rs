@@ -24,9 +24,9 @@ use static_assertions::const_assert;
 use wdk::println;
 #[cfg(not(test))]
 use wdk_alloc::WDKAllocator;
-use wdk_macros::call_unsafe_wdf_function_binding;
 use wdk_sys::{
     ntddk::DbgPrint,
+    wdf::*,
     DRIVER_OBJECT,
     NTSTATUS,
     PCUNICODE_STRING,
@@ -89,17 +89,8 @@ pub unsafe extern "system" fn driver_entry(
     let driver_attributes = WDF_NO_OBJECT_ATTRIBUTES;
     let driver_handle_output = WDF_NO_HANDLE.cast::<*mut wdk_sys::WDFDRIVER__>();
 
-    let wdf_driver_create_ntstatus;
-    // SAFETY: This is safe because:
-    //         1. `driver` is provided by `DriverEntry` and is never null
-    //         2. `registry_path` is provided by `DriverEntry` and is never null
-    //         3. `driver_attributes` is allowed to be null
-    //         4. `driver_config` is a valid pointer to a valid `WDF_DRIVER_CONFIG`
-    //         5. `driver_handle_output` is expected to be null
-    unsafe {
-        #![allow(clippy::multiple_unsafe_ops_per_block)]
-        wdf_driver_create_ntstatus = call_unsafe_wdf_function_binding!(
-            WdfDriverCreate,
+    let wdf_driver_create_ntstatus = unsafe {
+        WdfDriverCreate(
             driver as wdk_sys::PDRIVER_OBJECT,
             registry_path,
             driver_attributes,
@@ -161,16 +152,8 @@ extern "C" fn evt_driver_device_add(
 
     let mut device_handle_output: WDFDEVICE = WDF_NO_HANDLE.cast();
 
-    let ntstatus;
-    // SAFETY: This is safe because:
-    //       1. `device_init` is provided by `EvtDriverDeviceAdd` and is never null
-    //       2. the argument receiving `WDF_NO_OBJECT_ATTRIBUTES` is allowed to be
-    //          null
-    //       3. `device_handle_output` is expected to be null
-    unsafe {
-        #![allow(clippy::multiple_unsafe_ops_per_block)]
-        ntstatus = wdk_macros::call_unsafe_wdf_function_binding!(
-            WdfDeviceCreate,
+    let ntstatus = unsafe {
+        WdfDeviceCreate(
             &mut device_init,
             WDF_NO_OBJECT_ATTRIBUTES,
             &mut device_handle_output,
